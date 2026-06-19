@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VisionLens AI</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #080c14;
+    --surface: rgba(255,255,255,0.04);
+    --surface-hover: rgba(255,255,255,0.07);
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.14);
+    --text-primary: #f0f2f7;
+    --text-secondary: #8b92a8;
+    --text-muted: #4a5168;
+    --blue: #3b82f6;
+    --blue-glow: rgba(59,130,246,0.15);
+    --purple: #a855f7;
+    --purple-glow: rgba(168,85,247,0.15);
+    --green: #22c55e;
+    --green-glow: rgba(34,197,94,0.15);
+    --orange: #f97316;
+    --orange-glow: rgba(249,115,22,0.15);
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --radius-sm: 12px;
+    --radius-md: 16px;
+    --radius-lg: 24px;
+  }
+
+  html { font-size: 16px; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+    line-height: 1.5;
+  }
+
+  /* Background layers */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 10%, rgba(59,130,246,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(168,85,247,0.06) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Grid background */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app { position: relative; z-index: 1; }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    background: rgba(8,12,20,0.7);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--blue), var(--purple));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .logo-icon svg { width: 18px; height: 18px; fill: white; }
+
+  .logo-text {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+
+  .logo-text span {
+    background: linear-gradient(135deg, #93c5fd, #c4b5fd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: rgba(34,197,94,0.1);
+    border: 1px solid rgba(34,197,94,0.2);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--green);
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+
+  .live-badge.active { opacity: 1; }
+
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse-dot 1.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* ── Main Layout ── */
+  main {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 32px 32px 48px;
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  /* ── Glass Card Base ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(20px);
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .card:hover { border-color: var(--border-strong); }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .card-title {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  /* ── Webcam Card ── */
+  .webcam-wrapper {
+    position: relative;
+    aspect-ratio: 4/3;
+    background: #050810;
+    overflow: hidden;
+  }
+
+  #webcam {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: scaleX(-1);
+  }
+
+  #canvas { display: none; }
+
+  .webcam-overlay {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  .overlay-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    background: rgba(0,0,0,0.65);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--text-primary);
+  }
+
+  .overlay-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse-dot 1.4s ease-in-out infinite;
+  }
+
+  .fps-badge {
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  /* Scanner line */
+  .scan-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(59,130,246,0.8), transparent);
+    animation: scan 3s ease-in-out infinite;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+
+  .scan-line.active { opacity: 1; }
+
+  @keyframes scan {
+    0% { top: 0%; }
+    100% { top: 100%; }
+  }
+
+  /* Corner brackets */
+  .corner {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    opacity: 0.5;
+  }
+  .corner-tl { top: 10px; left: 10px; border-top: 2px solid var(--blue); border-left: 2px solid var(--blue); border-radius: 3px 0 0 0; }
+  .corner-tr { top: 10px; right: 10px; border-top: 2px solid var(--blue); border-right: 2px solid var(--blue); border-radius: 0 3px 0 0; }
+  .corner-bl { bottom: 10px; left: 10px; border-bottom: 2px solid var(--blue); border-left: 2px solid var(--blue); border-radius: 0 0 0 3px; }
+  .corner-br { bottom: 10px; right: 10px; border-bottom: 2px solid var(--blue); border-right: 2px solid var(--blue); border-radius: 0 0 3px 0; }
+
+  /* No camera state */
+  .no-camera {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    background: rgba(8,12,20,0.95);
+    padding: 24px;
+    text-align: center;
+  }
+
+  .no-camera svg {
+    width: 48px;
+    height: 48px;
+    color: var(--text-muted);
+    opacity: 0.6;
+  }
+
+  .no-camera p { color: var(--text-secondary); font-size: 14px; max-width: 220px; }
+
+  .btn-start {
+    padding: 9px 20px;
+    border-radius: 10px;
+    border: 1px solid var(--blue);
+    background: rgba(59,130,246,0.1);
+    color: var(--blue);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+
+  .btn-start:hover {
+    background: rgba(59,130,246,0.18);
+    transform: translateY(-1px);
+  }
+
+  .btn-start:active { transform: translateY(0); }
+
+  /* ── Right Column ── */
+  .right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ── Prediction Card ── */
+  .prediction-card {
+    padding: 28px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .prediction-glow {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.6s;
+    pointer-events: none;
+  }
+
+  .prediction-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    position: relative;
+    z-index: 1;
+  }
+
+  .prediction-value {
+    font-size: 48px;
+    font-weight: 700;
+    letter-spacing: -1.5px;
+    line-height: 1;
+    position: relative;
+    z-index: 1;
+    transition: all 0.15s ease;
+  }
+
+  .prediction-confidence {
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--text-secondary);
+    position: relative;
+    z-index: 1;
+    letter-spacing: -0.5px;
+  }
+
+  .prediction-confidence span {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  /* animate-in class */
+  @keyframes pop-in {
+    0% { transform: scale(0.88); opacity: 0; }
+    60% { transform: scale(1.04); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .pop { animation: pop-in 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+  /* Waiting state */
+  .waiting-text {
+    font-size: 15px;
+    color: var(--text-muted);
+    position: relative;
+    z-index: 1;
+  }
+
+  .dots-loading::after {
+    content: '';
+    animation: dots 1.4s steps(4, end) infinite;
+  }
+
+  @keyframes dots {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+    100% { content: ''; }
+  }
+
+  /* ── Probability Bars ── */
+  .prob-card { padding: 20px; }
+
+  .prob-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+
+  .prob-list { display: flex; flex-direction: column; gap: 14px; }
+
+  .prob-item {}
+
+  .prob-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .prob-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .prob-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .prob-pct {
+    font-size: 13px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+    min-width: 52px;
+    text-align: right;
+  }
+
+  .prob-track {
+    height: 6px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .prob-bar {
+    height: 100%;
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.18s linear;
+  }
+
+  /* ── Status Card ── */
+  .status-card { padding: 16px 20px; }
+
+  .status-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+
+  .status-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+  }
+
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+
+  .status-dot.green { background: var(--green); box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+  .status-dot.red { background: var(--red); }
+  .status-dot.amber { background: var(--amber); }
+
+  .status-name {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .status-val {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  /* ── Recharts mini chart ── */
+  .chart-wrapper {
+    padding: 0 20px 16px;
+  }
+
+  /* ── Bottom padding ── */
+  .spacer { height: 32px; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 12px 18px;
+    border-radius: 12px;
+    background: rgba(20,24,36,0.95);
+    border: 1px solid var(--border-strong);
+    backdrop-filter: blur(16px);
+    font-size: 13px;
+    color: var(--text-secondary);
+    transform: translateY(16px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    z-index: 9999;
+    max-width: 280px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    main {
+      grid-template-columns: 1fr;
+      padding: 20px 16px 40px;
+      gap: 16px;
+    }
+
+    header { padding: 16px 20px; }
+
+    .prediction-value { font-size: 38px; }
+
+    .status-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 500px) {
+    .logo-text { font-size: 14px; }
+    .prediction-value { font-size: 32px; }
+    .status-grid { gap: 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="10" cy="10" r="3.5"/>
+          <path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 14a6 6 0 110-12 6 6 0 010 12z" opacity="0.5"/>
+          <path d="M10 5.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9zm0 7a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" opacity="0.7"/>
+        </svg>
+      </div>
+      <span class="logo-text"><span>VisionLens</span> AI</span>
+    </div>
+
+    <div class="live-badge" id="live-badge">
+      <div class="live-dot"></div>
+      LIVE
+    </div>
+  </header>
+
+  <!-- ── Main ── -->
+  <main>
+
+    <!-- ── LEFT: Webcam ── -->
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Camera Feed</span>
+          <span class="card-title" id="class-count" style="color: var(--text-muted);">4 Classes</span>
+        </div>
+
+        <div class="webcam-wrapper">
+          <video id="webcam" autoplay playsinline muted></video>
+          <canvas id="canvas"></canvas>
+
+          <div class="scan-line" id="scan-line"></div>
+          <div class="corner corner-tl"></div>
+          <div class="corner corner-tr"></div>
+          <div class="corner corner-bl"></div>
+          <div class="corner corner-br"></div>
+
+          <div class="webcam-overlay">
+            <div class="overlay-badge">
+              <div class="overlay-dot"></div>
+              LIVE
+            </div>
+            <div class="overlay-badge fps-badge" id="fps-display">FPS: —</div>
+          </div>
+
+          <div class="no-camera" id="no-camera">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.277A1 1 0 0121 8.677V15.5a1 1 0 01-1.447.894L15 14M4 7h8a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z"/>
+            </svg>
+            <p id="no-camera-msg">Enable your camera to start real-time classification</p>
+            <button class="btn-start" id="btn-start">Enable Camera</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RIGHT: Dashboard ── -->
+    <div class="right-col">
+
+      <!-- Current Prediction -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Prediction</span>
+          <span class="card-title" id="req-count" style="color: var(--text-muted);">0 frames</span>
+        </div>
+
+        <div class="prediction-card" id="prediction-card">
+          <div class="prediction-glow" id="prediction-glow"></div>
+
+          <div id="pred-waiting">
+            <p class="waiting-text dots-loading">Awaiting input</p>
+          </div>
+
+          <div id="pred-result" style="display:none; flex-direction:column; align-items:center; gap:6px; width:100%">
+            <div class="prediction-label">Detected</div>
+            <div class="prediction-value" id="pred-label">—</div>
+            <div class="prediction-confidence">
+              Confidence&nbsp; <span id="pred-conf">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Probability Bars -->
+      <div class="card prob-card">
+        <div class="prob-section-title">Class Probabilities</div>
+        <div class="prob-list" id="prob-list">
+          <!-- Rendered by JS -->
+          <div style="color: var(--text-muted); font-size: 13px; text-align:center; padding: 12px 0;">Waiting for predictions…</div>
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div class="card status-card">
+        <div class="card-header" style="padding: 0 0 14px; border-bottom: 1px solid var(--border); margin-bottom: 14px;">
+          <span class="card-title">System Status</span>
+        </div>
+        <div class="status-grid">
+          <div class="status-item">
+            <div class="status-name">Camera</div>
+            <div class="status-row">
+              <div class="status-dot red" id="dot-camera"></div>
+              <div class="status-val" id="val-camera">Inactive</div>
+            </div>
+          </div>
+          <div class="status-item">
+            <div class="status-name">API</div>
+            <div class="status-row">
+              <div class="status-dot amber" id="dot-api"></div>
+              <div class="status-val" id="val-api">Checking</div>
+            </div>
+          </div>
+          <div class="status-item">
+            <div class="status-name">Model</div>
+            <div class="status-row">
+              <div class="status-dot amber" id="dot-model"></div>
+              <div class="status-val" id="val-model">Waiting</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'https://visionlens-ai.onrender.com';
+
+// Color config per class
+const CLASS_CONFIG = {
+  'Male':   { color: '#3b82f6', glow: 'rgba(59,130,246,0.12)',  dot: '#3b82f6' },
+  'Female': { color: '#a855f7', glow: 'rgba(168,85,247,0.12)', dot: '#a855f7' },
+  'Animal': { color: '#22c55e', glow: 'rgba(34,197,94,0.12)',  dot: '#22c55e' },
+  'Bird':   { color: '#f97316', glow: 'rgba(249,115,22,0.12)', dot: '#f97316' },
+};
+
+const DEFAULT_CLASSES = ['Male','Female','Animal','Bird'];
+
+// State
+let cameraActive = false;
+let currentPrediction = null;
+let reqCount = 0;
+let fpsTimer = null;
+let fpsFrames = 0;
+let classifyInterval = null;
+let inFlight = 0;
+let classes = DEFAULT_CLASSES;
+
+// Fixed small capture size -> tiny payload -> fast transfer
+const CAPTURE_W = 320;
+const CAPTURE_H = 240;
+
+// DOM refs
+const video    = document.getElementById('webcam');
+const canvas   = document.getElementById('canvas');
+const ctx      = canvas.getContext('2d');
+const noCam    = document.getElementById('no-camera');
+const noCamMsg = document.getElementById('no-camera-msg');
+const btnStart = document.getElementById('btn-start');
+const scanLine = document.getElementById('scan-line');
+const liveBadge = document.getElementById('live-badge');
+const fpsDis   = document.getElementById('fps-display');
+const reqCntEl = document.getElementById('req-count');
+const probList = document.getElementById('prob-list');
+const predWait = document.getElementById('pred-waiting');
+const predRes  = document.getElementById('pred-result');
+const predLabel= document.getElementById('pred-label');
+const predConf = document.getElementById('pred-conf');
+const predGlow = document.getElementById('prediction-glow');
+const dotCam   = document.getElementById('dot-camera');
+const valCam   = document.getElementById('val-camera');
+const dotApi   = document.getElementById('dot-api');
+const valApi   = document.getElementById('val-api');
+const dotModel = document.getElementById('dot-model');
+const valModel = document.getElementById('val-model');
+const toast    = document.getElementById('toast');
+
+// ── Toast ──
+let toastTimer;
+function showToast(msg, duration = 3200) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
+}
+
+// ── Status helpers ──
+function setStatus(dotEl, valEl, state, text) {
+  dotEl.className = 'status-dot ' + state;
+  valEl.textContent = text;
+}
+
+// ── Health check ──
+async function checkHealth() {
+  try {
+    const r = await fetch(API + '/health', { signal: AbortSignal.timeout(5000) });
+    const d = await r.json();
+    setStatus(dotApi, valApi, 'green', 'Connected');
+    if (d.model === 'loaded') {
+      // keep model status in sync with prediction state
+    }
+    // Fetch labels
+    try {
+      const lr = await fetch(API + '/labels');
+      const ld = await lr.json();
+      if (ld.classes && ld.classes.length) classes = ld.classes;
+    } catch {}
+  } catch {
+    setStatus(dotApi, valApi, 'red', 'Offline');
+    showToast('⚠ Backend unreachable. Retrying…');
+  }
+}
+
+// ── Probability bars ──
+function buildProbBars(scores) {
+  const sorted = [...scores].sort((a,b) => b.score - a.score);
+  probList.innerHTML = '';
+  sorted.forEach(item => {
+    const cfg = CLASS_CONFIG[item.label] || { color: '#64748b', dot: '#64748b' };
+    const pct = Math.round(item.score * 100) / 100;
+
+    const div = document.createElement('div');
+    div.className = 'prob-item';
+    div.innerHTML = `
+      <div class="prob-row">
+        <div class="prob-name">
+          <div class="prob-dot" style="background:${cfg.dot}"></div>
+          ${item.label}
+        </div>
+        <div class="prob-pct" id="pct-${item.label}">${pct.toFixed(2)}%</div>
+      </div>
+      <div class="prob-track">
+        <div class="prob-bar" id="bar-${item.label}" style="background:${cfg.color};"></div>
+      </div>
+    `;
+    probList.appendChild(div);
+  });
+
+  // Animate bars after DOM paint
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      sorted.forEach(item => {
+        const bar = document.getElementById('bar-' + item.label);
+        if (bar) bar.style.width = item.score.toFixed(2) + '%';
+      });
+    });
+  });
+}
+
+function updateProbBars(scores) {
+  const sorted = [...scores].sort((a,b) => b.score - a.score);
+  const existing = probList.querySelectorAll('.prob-item');
+
+  // If structure doesn't match, rebuild
+  if (existing.length !== sorted.length) {
+    buildProbBars(scores);
+    return;
+  }
+
+  sorted.forEach((item, i) => {
+    const cfg = CLASS_CONFIG[item.label] || { color: '#64748b', dot: '#64748b' };
+    const pctEl = document.getElementById('pct-' + item.label);
+    const barEl = document.getElementById('bar-' + item.label);
+    if (pctEl) pctEl.textContent = item.score.toFixed(2) + '%';
+    if (barEl) barEl.style.width = item.score.toFixed(2) + '%';
+  });
+}
+
+let firstPrediction = true;
+
+// ── Show prediction ──
+function showPrediction(data) {
+  const label = data.prediction;
+  const conf  = data.confidence;
+  const cfg   = CLASS_CONFIG[label] || { color: '#f0f2f7', glow: 'rgba(255,255,255,0.08)' };
+
+  // Update prediction glow
+  predGlow.style.background = `radial-gradient(ellipse 60% 80% at 50% 50%, ${cfg.glow} 0%, transparent 70%)`;
+  predGlow.style.opacity = '1';
+
+  const changed = currentPrediction !== label;
+  currentPrediction = label;
+
+  if (changed || firstPrediction) {
+    predRes.style.display = 'none';
+    predWait.style.display = 'none';
+
+    predLabel.textContent = label;
+    predLabel.style.background = `linear-gradient(135deg, ${cfg.color}, ${cfg.color}aa)`;
+    predLabel.style.webkitBackgroundClip = 'text';
+    predLabel.style.webkitTextFillColor = 'transparent';
+    predLabel.style.backgroundClip = 'text';
+
+    predRes.style.display = 'flex';
+    predRes.classList.remove('pop');
+    void predRes.offsetWidth;
+    predRes.classList.add('pop');
+    firstPrediction = false;
+  }
+
+  predConf.textContent = conf.toFixed(2) + '%';
+
+  // Update model status
+  setStatus(dotModel, valModel, 'green', 'Active');
+
+  // Update probabilities
+  if (data.scores && data.scores.length) {
+    if (firstPrediction || document.querySelectorAll('.prob-item').length === 0) {
+      buildProbBars(data.scores);
+    } else {
+      updateProbBars(data.scores);
+    }
+  }
+
+  reqCount++;
+  reqCntEl.textContent = reqCount + ' frames';
+}
+
+// ── Capture & classify ──
+function captureAndClassify() {
+  // Drop frame if a request is already in-flight (don't queue, just skip)
+  if (!cameraActive || inFlight > 0 || !video.videoWidth) return;
+
+  // Capture at small fixed size — keeps base64 payload tiny (~8-15 KB)
+  canvas.width  = CAPTURE_W;
+  canvas.height = CAPTURE_H;
+  ctx.drawImage(video, 0, 0, CAPTURE_W, CAPTURE_H);
+
+  // Low quality JPEG = much smaller, still good enough for classification
+  const b64 = canvas.toDataURL('image/jpeg', 0.55).split(',')[1];
+
+  inFlight++;
+  fpsFrames++;
+
+  fetch(API + '/predict', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image: b64 }),
+    signal: AbortSignal.timeout(3000),
+  })
+  .then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
+  .then(d => {
+    setStatus(dotApi, valApi, 'green', 'Connected');
+    showPrediction(d);
+  })
+  .catch(err => {
+    setStatus(dotApi, valApi, 'red', 'Error');
+    setStatus(dotModel, valModel, 'amber', 'Waiting');
+    console.warn('Predict error:', err.message);
+  })
+  .finally(() => {
+    inFlight--;
+  });
+}
+
+// ── FPS counter ──
+function startFpsCounter() {
+  fpsTimer = setInterval(() => {
+    fpsDis.textContent = 'FPS: ' + fpsFrames;
+    fpsFrames = 0;
+  }, 1000);
+}
+
+// ── Start camera ──
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: false,
+    });
+
+    video.srcObject = stream;
+    await new Promise(res => { video.onloadedmetadata = res; });
+    video.play();
+
+    cameraActive = true;
+    noCam.style.display = 'none';
+    scanLine.classList.add('active');
+    liveBadge.classList.add('active');
+
+    setStatus(dotCam, valCam, 'green', 'Active');
+    setStatus(dotModel, valModel, 'amber', 'Warming up');
+
+    startFpsCounter();
+
+    classifyInterval = setInterval(captureAndClassify, 2000);
+
+  } catch (err) {
+    if (err.name === 'NotAllowedError') {
+      noCamMsg.textContent = 'Camera permission denied. Please allow access and refresh.';
+    } else {
+      noCamMsg.textContent = 'Camera unavailable: ' + err.message;
+    }
+    setStatus(dotCam, valCam, 'red', 'Denied');
+    showToast('Camera permission required to start classification');
+  }
+}
+
+// ── Init ──
+btnStart.addEventListener('click', startCamera);
+
+checkHealth();
+setInterval(checkHealth, 30000);
+</script>
+</body>
+</html>
