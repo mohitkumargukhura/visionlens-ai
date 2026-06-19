@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: visionlens-api
+    env: python
+    plan: free
+
+    buildCommand: |
+      cd backend
+      pip install -r requirements.txt
+
+    startCommand: |
+      cd backend
+      uvicorn app:app --host 0.0.0.0 --port $PORT

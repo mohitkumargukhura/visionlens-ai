@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+tm_env/
+.vscode/
